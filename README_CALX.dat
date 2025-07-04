@@ -1,0 +1,72 @@
+#### PREPAREI OS PDBS
+
+aberta: model_1_cbd12_11.pdb
+
+vmd model_1_cbd12_11.pdb
+abre o TK Console
+set sel [atomselect top "not hydrogen"]
+$sel writepdb model.noH.pdb
+pdb_reres model.noH.pdb > model.renum.pdb
+
+smog2 -i model.renum.pdb -AAgaussian -dname open.AA -OpenSMOG
+** vai dar erro, e o problema esta no ILE e no GLU, nao estao compativeis com o .bif e com o mapEXTRACT
+** precisa modificar na mao, depois que fizer isso, roda!
+
+
+fechada: model_50_cbd12_11.pdb
+
+vmd model_50_cbd12_11.pdb
+abre o TK Console 
+set sel [atomselect top "not hydrogen"]
+$sel writepdb model.noH.pdb
+pdb_reres model.noH.pdb > model.renum.pdb
+
+smog2 -i model.renum.pdb -AAgaussian -dname closed.AA -OpenSMOG
+** vai dar erro, e o problema esta no ILE e no GLU, nao estao compativeis com o .bif e com o mapEXTRACT
+CD  ILE -> CD1 ILE
+GLU OC1 -> O e OC2 ultima linha retirar
+** precisa modificar na mao, depois que fizer isso, roda!
+
+### irei rodar simulacoes basicas para ver se o sistema esta flutuando entre aberto e fechado para os dois pdbs ###
+rodando T = [0.8-1.7] na shiva, com o objetivo de verificar a flutuacao do aberto e fechado.
+
+modificar contatos
+write_xml.dual_basin.py
+
+output_filename = "dual_basin.xml" -> nome do arquivo final
+xsd_file = "OpenSMOG.xsd" - arquivo necessario na pasta 
+
+# Read XML of each model to select the unique interactions
+conf1 = parse_xml('closed.AA.xml') ->  saindo  daqui
+conf2 = parse_xml('opened.AA.xml') -> chegando aqui
+
+# Add interactions to the root element
+write_single_gaussian(root, u1, 'unique-closed', 0.625) -> _, _, single_gaussian_closed, peso
+write_double_gaussian(root, c, 'common-contacts') -> _, _, double_gaussian, peso
+write_single_gaussian(root, u2, 'unique-open', 1.375) -> _, _, single_gaussian_opened, peso
+
+modificando diedros
+1. get_diff.py
+# File paths
+top = 'closed.AA.top' -> saindo daqui
+conf1 = md.load('closed_11.pdb') -> saindo
+conf2 = md.load('opened_11.pdb') -> chegando
+
+2. write_diff_top.py
+top_file = 'closed.AA.top' -> referencia
+out_file = 'closed_angles_dihedrals.txt'
+
+ang_ind = np.load('sel_ang_1based.npy') -> sai de 1.
+dih_ind = np.load('sel_dih_1based.npy') -> sai de 1.
+
+
+
+
+
+
+
+
+
+
+
+
