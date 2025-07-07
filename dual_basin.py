@@ -28,8 +28,6 @@ pdb2 = md.load(obj + '.pdb')
 angles_indices, dihedrals_indices,angles,dihedrals = gd.parse_top_file(top1)
 
 
-print(angles_indices[0])
-print(angles[0])
 #Compute the angles and dihedrals for both PDB files
 # and calculate the differences using the indices from the topology file
 
@@ -48,21 +46,30 @@ np.save('sel_ang_1based.npy', angles_indices[indices_ang_percent])
 np.save('angvalues.npy', angles[indices_ang_percent])
 
 
-# Delete duplicate indices, convert from radians to degrees, and compute the difference 
-#dihedrals_indices= np.unique(dihedrals_indices, axis=0)
-dih1 = np.rad2deg(md.compute_dihedrals(pdb1, dihedrals_indices)).T
-dih2 = np.rad2deg(md.compute_dihedrals(pdb2, dihedrals_indices)).T
-dihd = gd.diff (dih1, dih2)
 
 print(len(dihedrals_indices))
 print(len(dihedrals))
 
+# Delete duplicate indices, convert from radians to degrees, and compute the difference 
+unique_rows, idx = np.unique(dihedrals[:, :4], axis=0, return_index=True)
+dihedrals = dihedrals[idx]
+dihedrals_indices= np.unique(dihedrals_indices, axis=0)
+
+print(len(dihedrals))
+print(len(dihedrals_indices))
+
+
+dih1 = np.rad2deg(md.compute_dihedrals(pdb1, dihedrals_indices)).T
+dih2 = np.rad2deg(md.compute_dihedrals(pdb2, dihedrals_indices)).T
+dihd = gd.diff (dih1, dih2)
+
 #Check and print the dihedrals that are greater than 54.5 degrees
-print(len(np.where(dihd>54.5)[0]))
 ind_dih=dihedrals_indices[np.where(dihd>54.5)[0]]
+dih= dihedrals[np.where(dihd>54.5)[0]]
+
+dih[:,:4] = dih[:,:4].astype(int) + 1  # Convert to 1-based indexing
 np.save('sel_dih_1based.npy',ind_dih+1) # +1 to convert from 0-based to 1-based indexing
-
-
+np.save('dihvalues.npy', dih)
 
 
 # # Read XML of each model to  select the unique interactions

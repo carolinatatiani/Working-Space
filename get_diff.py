@@ -1,4 +1,7 @@
- #!/usr/bin/env python3
+# by Carolina Tatiani
+# email: carolina.tatiani@unesp.br
+# Last Modified: 07/07/2025 
+# #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Sep 12 14:10:06 2024
