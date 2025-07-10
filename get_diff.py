@@ -48,9 +48,11 @@ def parse_top_file(top_file):
                 angles.append([(int(angvalue[0])-1), (int(angvalue[1])-1), (int(angvalue[2])-1), angvalue[3], angvalue[4], angvalue[5]])
             # Parse dihedrals
             if inside_dihedrals and line and not line.startswith(';'):
+                print(line)
                 dihvalue = line.split()
-                dihedrals.append([int(dihvalue[0])-1, int(dihvalue[1])-1, int(dihvalue[2])-1, int(dihvalue[3])-1,dihvalue[4],dihvalue[5],dihvalue[6]])  # Store the line for later use
-                dihedrals_indices.append([int(dihvalue[0])-1, int(dihvalue[1])-1, int(dihvalue[2])-1, int(dihvalue[3])-1])  # Convert to 0-indexed
+                if len(dihvalue) == 8:  #Excluding improper dihedrals
+                    dihedrals.append([int(dihvalue[0])-1, int(dihvalue[1])-1, int(dihvalue[2])-1, int(dihvalue[3])-1,dihvalue[4],dihvalue[5],dihvalue[6],dihvalue[7]])  # Store the line for later use
+                    dihedrals_indices.append([int(dihvalue[0])-1, int(dihvalue[1])-1, int(dihvalue[2])-1, int(dihvalue[3])-1])  # Convert to 0-indexed
     np.save('angvalues.npy', angles)
     np.save('dihvalues.npy', dihedrals)
     return np.array(angles_indices), np.array(dihedrals_indices),np.array(angles), np.array(dihedrals)

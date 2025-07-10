@@ -46,65 +46,76 @@ np.save('sel_ang_1based.npy', angles_indices[indices_ang_percent])
 np.save('angvalues.npy', angles[indices_ang_percent])
 
 
-
-print(len(dihedrals_indices))
-print(len(dihedrals))
-
-# Delete duplicate indices, convert from radians to degrees, and compute the difference 
-unique_rows, idx = np.unique(dihedrals[:, :4], axis=0, return_index=True)
-dihedrals = dihedrals[idx]
-dihedrals_indices= np.unique(dihedrals_indices, axis=0)
-
-print(len(dihedrals))
-print(len(dihedrals_indices))
-
-
+#Calculate the dihedrals and their differences
 dih1 = np.rad2deg(md.compute_dihedrals(pdb1, dihedrals_indices)).T
 dih2 = np.rad2deg(md.compute_dihedrals(pdb2, dihedrals_indices)).T
 dihd = gd.diff (dih1, dih2)
 
-#Check and print the dihedrals that are greater than 54.5 degrees
-ind_dih=dihedrals_indices[np.where(dihd>54.5)[0]]
-dih= dihedrals[np.where(dihd>54.5)[0]]
+#Check and print the dihedrals that the diference is less than 54.5 degrees
+# This is the threshold used in OpenSMOG to select dihedrals for the dual basin model
+# The threshold is 54.5 degrees, which is approximately 1.0 radians
+common= dihedrals[np.where(dihd<54.5)[0]]
 
-dih[:,:4] = dih[:,:4].astype(int) + 1  # Convert to 1-based indexing
-np.save('sel_dih_1based.npy',ind_dih+1) # +1 to convert from 0-based to 1-based indexing
-np.save('dihvalues.npy', dih)
+# Remove duplicates from the common dihedrals
+unique_rows, idx = np.unique(common[:, :4], axis=0, return_index=True)
+common = common[idx]
+
+common[:,:4] = common[:,:4].astype(int) + 1  # Convert to 1-based indexing
+np.save('dihcommon.npy', common)
+
+tmp1, tmp2 ,tmp3,du1 = gd.parse_top_file(top1)
+tmp1,tmp2,tmp3,du2 = gd.parse_top_file(top2)
+# Select the unique dihedrals from both topologies
+# and remove the dihedrals that are not in the common list
+du1=du1[np.where(dihd>54.5)[0]]
+unique_rows, idx = np.unique(du1[:, :4], axis=0, return_index=True)
+du1 = du1[idx]
+du1[:,:4] = du1[:,:4].astype(int) + 1 # Convert to 1-based indexing
+
+du2=du2[np.where(dihd>54.5)[0]]
+unique_rows, idx = np.unique(du2[:, :4], axis=0, return_index=True)
+du2 = du2[idx]
+du2[:,:4] = du2[:,:4].astype(int) + 1 # Convert to 1-based indexing
+
+np.save('dihunique1.npy', du1)
+np.save('dihunique2.npy', du2)
+
+# Read XML of each model to  select the unique interactions
+xml1 = write_xml.parse_xml(f'{ref}.xml')
+xml2 = write_xml.parse_xml(f'{obj}.xml')
+
+c, u1, u2 = write_xml.classify_contacts(xml1, xml2)
+
+np.save("common", c)
+np.save("closed", u1)
+np.save("open", u2)
 
 
-# # Read XML of each model to  select the unique interactions
-# xml1 = write_xml.parse_xml(f'{ref}.xml')
-# xml2 = write_xml.parse_xml(f'{obj}.xml')
+# Create root element
+root = ET.Element("OpenSMOGforces")
 
-# c, u1, u2 = write_xml.classify_contacts(xml1, xml2)
+# Add interactions to the root element
+write_xml.write_single_gaussian(root, u1, 'unique-closed', 0.625)
+write_xml.write_double_gaussian(root, c, 'common-contacts')
+write_xml.write_single_gaussian(root, u2, 'unique-open', 1.375)
+write_xml.write_cosine_squared(root, common, 'common-dihedrals', w=1.0)
+write_xml.write_cosine_squared(root, du1, 'unique-closed-dihedrals', w=1)
+write_xml.write_cosine_squared(root, du2, 'unique-open-dihedrals', w=1)
+#write_single_gaussian(root, uniqueC, 'unique-closed', 1)#len(uniqueC)/len(u2)*1.36)#*1.)
 
-# np.save("common", c)
-# np.save("closed", u1)
-# np.save("open", u2)
+# Finalize the XML tree
+tree = ET.ElementTree(root)
+ET.indent(tree, '  ')
+tree.write(output_filename, encoding="ISO-8859-1", xml_declaration=True)
 
+# Validate the XML file
+with open(output_filename, 'rb') as f:
+    xml_bytes = f.read()
 
-# # Create root element
-# root = ET.Element("OpenSMOGforces")
-
-# # Add interactions to the root element
-# write_xml.write_single_gaussian(root, u1, 'unique-closed', 0.625)
-# write_xml.write_double_gaussian(root, c, 'common-contacts')
-# write_xml.write_single_gaussian(root, u2, 'unique-open', 1.375)
-# #write_single_gaussian(root, uniqueC, 'unique-closed', 1)#len(uniqueC)/len(u2)*1.36)#*1.)
-
-# # Finalize the XML tree
-# tree = ET.ElementTree(root)
-# ET.indent(tree, '  ')
-# tree.write(output_filename, encoding="ISO-8859-1", xml_declaration=True)
-
-# # Validate the XML file
-# with open(output_filename, 'rb') as f:
-#     xml_bytes = f.read()
-
-# if write_xml.validate_xml(xml_bytes, xsd_file):
-#     print("XML is valid against the XSD schema.")
-# else:
-#     print("XML is NOT valid against the XSD schema.")
+if write_xml.validate_xml(xml_bytes, xsd_file):
+    print("XML is valid against the XSD schema.")
+else:
+    print("XML is NOT valid against the XSD schema.")
 
 
 # top2 = 'opened.AA.top'
